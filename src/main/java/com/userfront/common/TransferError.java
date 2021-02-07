@@ -6,6 +6,7 @@ public enum TransferError {
     LOW_BALANCE("Transaction Failed : Your account does not have enough balance."),
     INVALID_RECIPIENT("Transaction Failed : No recipient found"),
     INVALID_TRANSFER("Transaction Failed : Invalid data provided"),
+    INVALID_TRANSFER_AMOUNT("Transaction Failed : Please provide valid amount"),
     ;
 
     private String errorMessage;

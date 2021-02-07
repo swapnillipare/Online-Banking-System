@@ -50,36 +50,49 @@ public class TransferController {
     public String betweenAccountsPost(
             @ModelAttribute("transferFrom") String transferFrom,
             @ModelAttribute("transferTo") String transferTo,
-            @ModelAttribute("amount") BigDecimal amount,
+            @ModelAttribute("amount") String amount,
             Principal principal,
             HttpServletRequest request,
             Model model
     ) throws Exception {
         User user = userService.findByUsername(principal.getName());
-        // Server Validation added
+
+        // even it handle from UI still handling here
         if (transferFrom.equals(transferTo)) {
-            return sendErrorResponse(request, TransferError.SAME_ACCOUNT_TRANSFER.getErrorMessage(),"betweenAccounts");
+            return sendErrorResponse(request, TransferError.SAME_ACCOUNT_TRANSFER.getErrorMessage(), "betweenAccounts");
+        }
+
+        BigDecimal transactionAmount = null;
+        try {
+            transactionAmount = new BigDecimal(amount);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return sendErrorResponse(request, TransferError.INVALID_TRANSFER_AMOUNT.getErrorMessage(), "betweenAccounts");
         }
 
         PrimaryAccount primaryAccount = user.getPrimaryAccount();
         SavingsAccount savingsAccount = user.getSavingsAccount();
 
         if (transferFrom.equals(AccountType.PRIMARY_ACCOUNT.getAccountType())) {
-            if (primaryAccount.getAccountBalance().compareTo(amount) <= 0) {
-                return sendErrorResponse(request, TransferError.LOW_BALANCE.getErrorMessage(),"betweenAccounts");
+            if (primaryAccount.getAccountBalance().compareTo(transactionAmount) <= 0) {
+                return sendErrorResponse(request, TransferError.LOW_BALANCE.getErrorMessage(), "betweenAccounts");
+            }
+        } else if (transferFrom.equals(AccountType.SAVING_ACCOUNT.getAccountType())) {
+            if (savingsAccount.getAccountBalance().compareTo(transactionAmount) <= 0) {
+                return sendErrorResponse(request, TransferError.LOW_BALANCE.getErrorMessage(), "betweenAccounts");
             }
         }
 
         if (transferFrom.equals(AccountType.SAVING_ACCOUNT.getAccountType())) {
-            if (savingsAccount.getAccountBalance().compareTo(amount) <= 0) {
+            if (savingsAccount.getAccountBalance().compareTo(transactionAmount) <= 0) {
                 model.addAttribute("transferFrom", transferFrom);
                 model.addAttribute("transferTo", transferTo);
                 model.addAttribute("amount", amount);
-                return sendErrorResponse(request, TransferError.LOW_BALANCE.getErrorMessage(),"betweenAccounts");
+                return sendErrorResponse(request, TransferError.LOW_BALANCE.getErrorMessage(), "betweenAccounts");
             }
         }
 
-        transactionService.betweenAccountsTransfer(transferFrom, transferTo, amount, primaryAccount, savingsAccount);
+        transactionService.betweenAccountsTransfer(transferFrom, transferTo, transactionAmount, primaryAccount, savingsAccount);
 
         return "redirect:/userFront";
     }
@@ -156,20 +169,60 @@ public class TransferController {
                                     @ModelAttribute("accountType") String accountType,
                                     @ModelAttribute("amount") String amount,
                                     Principal principal,
-                                    HttpServletRequest request) {
+                                    HttpServletRequest request,
+                                    Model model) {
 
-        if(recipientName.isEmpty() || accountType.isEmpty() || amount.isEmpty()){
-            return this.sendErrorResponse(request,TransferError.INVALID_TRANSFER.getErrorMessage(),"toSomeoneElse");
+        BigDecimal transactionAmount = null;
+        try {
+            transactionAmount = new BigDecimal(amount);
+        } catch (Exception e) {
+            e.printStackTrace();
+            List<Recipient> recipientList = transactionService.findRecipientList(principal);
+            model.addAttribute("recipientList", recipientList);
+            model.addAttribute("accountType", "");
+            return sendErrorResponse(request, TransferError.INVALID_TRANSFER_AMOUNT.getErrorMessage(), "toSomeoneElse");
+        }
+
+        if (recipientName.isEmpty() || accountType.isEmpty() || amount.isEmpty()) {
+            List<Recipient> recipientList = transactionService.findRecipientList(principal);
+            model.addAttribute("recipientList", recipientList);
+            model.addAttribute("accountType", "");
+            return this.sendErrorResponse(request, TransferError.INVALID_TRANSFER.getErrorMessage(), "toSomeoneElse");
         }
 
         User user = userService.findByUsername(principal.getName());
         Recipient recipient = transactionService.findRecipientByName(recipientName);
         if (recipient == null) {
-            return this.sendErrorResponse(request,TransferError.INVALID_RECIPIENT.getErrorMessage(),"toSomeoneElse");
+            List<Recipient> recipientList = transactionService.findRecipientList(principal);
+            model.addAttribute("recipientList", recipientList);
+            model.addAttribute("accountType", "");
+            return this.sendErrorResponse(request, TransferError.INVALID_RECIPIENT.getErrorMessage(), "toSomeoneElse");
         }
-        transactionService.toSomeoneElseTransfer(recipient, accountType, amount, user.getPrimaryAccount(), user.getSavingsAccount());
+
+        PrimaryAccount primaryAccount = user.getPrimaryAccount();
+        SavingsAccount savingsAccount = user.getSavingsAccount();
+        if (accountType.equals(AccountType.PRIMARY_ACCOUNT.getAccountType())) {
+            if (validateBalance(principal, model, transactionAmount, primaryAccount.getAccountBalance()))
+                return sendErrorResponse(request, TransferError.LOW_BALANCE.getErrorMessage(), "toSomeoneElse");
+        } else if (accountType.equals(AccountType.SAVING_ACCOUNT.getAccountType())) {
+            if (validateBalance(principal, model, transactionAmount, savingsAccount.getAccountBalance()))
+                return sendErrorResponse(request, TransferError.LOW_BALANCE.getErrorMessage(), "toSomeoneElse");
+        }
+
+        transactionService.toSomeoneElseTransfer(recipient, accountType, amount, primaryAccount, savingsAccount);
 
         return "redirect:/userFront";
+    }
+
+    private boolean validateBalance(Principal principal, Model model,
+                                    BigDecimal transactionAmount, BigDecimal accountBalance) {
+        if (accountBalance.compareTo(transactionAmount) <= 0) {
+            List<Recipient> recipientList = transactionService.findRecipientList(principal);
+            model.addAttribute("recipientList", recipientList);
+            model.addAttribute("accountType", "");
+            return true;
+        }
+        return false;
     }
 
     private String sendErrorResponse(HttpServletRequest request, String err, String redirectView) {
