@@ -1,13 +1,12 @@
 package com.userfront.service.UserServiceImpl;
 
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import com.userfront.dao.AppointmentDao;
 import com.userfront.domain.Appointment;
 import com.userfront.service.AppointmentService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class AppointmentServiceImpl implements AppointmentService {
@@ -25,6 +24,11 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     public Appointment findAppointment(Long id) {
         return null;
+    }
+
+    @Override
+    public List<Appointment> findByUser(long userId) {
+        return this.appointmentDao.findByUser(userId);
     }
 
     public void confirmAppointment(Long id) {
