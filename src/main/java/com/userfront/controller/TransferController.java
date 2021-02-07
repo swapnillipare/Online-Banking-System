@@ -8,10 +8,12 @@ import com.userfront.domain.SavingsAccount;
 import com.userfront.domain.User;
 import com.userfront.service.TransactionService;
 import com.userfront.service.UserService;
+import com.userfront.validator.RecipientValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -31,6 +33,9 @@ public class TransferController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private RecipientValidator recipientValidator;
 
     @RequestMapping(value = "/betweenAccounts", method = RequestMethod.GET)
     public String betweenAccounts(Model model) {
@@ -92,7 +97,14 @@ public class TransferController {
     }
 
     @RequestMapping(value = "/recipient/save", method = RequestMethod.POST)
-    public String recipientPost(@ModelAttribute("recipient") Recipient recipient, Principal principal) {
+    public String recipientPost(@ModelAttribute("recipient") Recipient recipient,
+                                Principal principal,
+                                BindingResult bindingResult) {
+
+        recipientValidator.validate(recipient, bindingResult);
+        if (bindingResult.hasErrors()) {
+            return "recipient";
+        }
 
         User user = userService.findByUsername(principal.getName());
         recipient.setUser(user);
