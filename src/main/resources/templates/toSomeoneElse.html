@@ -4,6 +4,11 @@
 <body roleId="page-top" data-spy="scroll" data-target=".navbar-fixed-top">
 <head th:replace="common/header :: navbar"/>
 <div class="container main">
+    <th:block th:if="${err}">
+        <div class="alert alert-danger" role="alert">
+            <span th:text="${err}" style=""></span>
+        </div>
+    </th:block>
     <div class="row">
         <div class="col-md-6">
             <form th:action="@{/transfer/toSomeoneElse}" method="post">

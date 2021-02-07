@@ -1,12 +1,6 @@
 package com.userfront.service.UserServiceImpl;
 
-import java.math.BigDecimal;
-import java.security.Principal;
-import java.util.Date;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
+import com.userfront.common.AccountType;
 import com.userfront.dao.PrimaryAccountDao;
 import com.userfront.dao.SavingsAccountDao;
 import com.userfront.domain.PrimaryAccount;
@@ -17,6 +11,12 @@ import com.userfront.domain.User;
 import com.userfront.service.AccountService;
 import com.userfront.service.TransactionService;
 import com.userfront.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.security.Principal;
+import java.util.Date;
 
 @Service
 public class AccountServiceImpl implements AccountService {
@@ -58,7 +58,7 @@ public class AccountServiceImpl implements AccountService {
     public void deposit(String accountType, double amount, Principal principal) {
         User user = userService.findByUsername(principal.getName());
 
-        if (accountType.equalsIgnoreCase("Primary")) {
+        if (accountType.equalsIgnoreCase(AccountType.PRIMARY_ACCOUNT.getAccountType())) {
             PrimaryAccount primaryAccount = user.getPrimaryAccount();
             primaryAccount.setAccountBalance(primaryAccount.getAccountBalance().add(new BigDecimal(amount)));
             primaryAccountDao.save(primaryAccount);
@@ -82,7 +82,7 @@ public class AccountServiceImpl implements AccountService {
     public void withdraw(String accountType, double amount, Principal principal) {
         User user = userService.findByUsername(principal.getName());
 
-        if (accountType.equalsIgnoreCase("Primary")) {
+        if (accountType.equalsIgnoreCase(AccountType.PRIMARY_ACCOUNT.getAccountType())) {
             PrimaryAccount primaryAccount = user.getPrimaryAccount();
             primaryAccount.setAccountBalance(primaryAccount.getAccountBalance().subtract(new BigDecimal(amount)));
             primaryAccountDao.save(primaryAccount);
